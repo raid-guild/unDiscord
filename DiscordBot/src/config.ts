@@ -1,0 +1,19 @@
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const { AKASH_CHAT_API_KEY, AKASH_CHAT_API_ENDPOINT, AKASH_CHAT_API_MODEL,DISCORD_API_TOKEN, DISCORD_CLIENT_ID, DISCORD_GUILD_ID, OPENAI_API_KEY, QDRANT_KEY, QDRANT_URL} = process.env;
+if (!DISCORD_API_TOKEN || !DISCORD_CLIENT_ID) {
+  throw new Error("Missing environment variables");
+}
+
+export const config = {
+    AKASH_CHAT_API_KEY,
+    AKASH_CHAT_API_ENDPOINT,
+    AKASH_CHAT_API_MODEL,
+    DISCORD_API_TOKEN,
+    DISCORD_CLIENT_ID,
+    DISCORD_GUILD_ID,
+    QDRANT_KEY,
+    QDRANT_URL
+};

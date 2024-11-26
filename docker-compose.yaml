@@ -1,0 +1,15 @@
+# Functions
+--- 
+services:
+  lurkerllama: 
+    build: ./DiscordBot
+    container_name: LurkerLlama
+    volumes:
+      - ./data/archives:/data/archives
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./data/storage:/qdrant/storage

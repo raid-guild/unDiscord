@@ -1,0 +1,30 @@
+{
+  "name": "lurker-llama",
+  "version": "0.1.0",
+  "description": "The smartest llama to ever exist — lurks in your discord channels to archive and answer questions about past conversations",
+  "author": {
+    "name": "Pupcakes (Fluffy9)",
+    "email": "fluffy9@pupcakes.me",
+    "url": "pupcakes.me"
+  },
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "@qdrant/js-client-rest": "^1.12.0",
+    "@qdrant/qdrant-js": "^1.12.0",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "llamaindex": "^0.8.22",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx dist/index.ts",
+    "build": "tsup src/index.ts --minify"
+  }
+}

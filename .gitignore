@@ -8,3 +8,4 @@ data/storage/*
 collections
 aliases
 node_modules
+docker-compose.yaml

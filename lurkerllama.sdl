@@ -2,7 +2,7 @@
 version: "2.0"
 services:
   lurkerllama:
-    image: pupcakes/lurkerllama
+    image: pupcakes/lurkerllama:latest
     expose:
       - port: 80
         as: 80
@@ -21,7 +21,7 @@ services:
     params:
       storage:
         data:
-          mount: /data
+          mount: /data/archives
           readOnly: false
   qdrant:
     image: qdrant/qdrant
@@ -33,16 +33,16 @@ services:
     params:
       storage:
         data:
-          mount: /data
+          mount: /qdrant/storage
           readOnly: false
 profiles:
   compute:
     lurkerllama:
       resources:
         cpu:
-          units: 1
+          units: 2
         memory:
-          size: 512Mi
+          size: 1gb
         storage:
           - size: 10gb
           - name: data
@@ -53,9 +53,9 @@ profiles:
     qdrant:
       resources:
         cpu:
-          units: 1
+          units: 2
         memory:
-          size: 512Mi
+          size: 1gb
         storage:
           - size: 10gb
           - name: data
@@ -67,11 +67,17 @@ profiles:
     dcloud:
       pricing:
         lurkerllama:
-          denom: uakt
+          denom: ibc/170C677610AC31DF0904FFE09CD3B5C657492170E7E52372E48756B71E56F2F1
           amount: 10000
         qdrant:
-          denom: uakt
+          denom: ibc/170C677610AC31DF0904FFE09CD3B5C657492170E7E52372E48756B71E56F2F1
           amount: 10000
+      attributes:
+        console/trials: "true"
+      signedBy:
+        anyOf: []
+        allOf:
+          - akash1365yvmc4s7awdyj3n2sav7xfx76adc6dnmlx63
 deployment:
   lurkerllama:
     dcloud:

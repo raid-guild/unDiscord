@@ -1,0 +1,83 @@
+---
+version: "2.0"
+services:
+  lurkerllama:
+    image: pupcakes/lurkerllama
+    expose:
+      - port: 80
+        as: 80
+        to:
+          - global: false
+    env:
+      - DISCORD_API_TOKEN=
+      - DISCORD_CLIENT_ID=
+      - DISCORD_GUILD_ID=
+      - QDRANT_KEY=
+      - QDRANT_URL=http://qdrant:6333
+      - AKASH_CHAT_API_KEY=
+      - AKASH_CHAT_API_ENDPOINT=https://chatapi.akash.network/api/v1
+      - AKASH_CHAT_API_MODEL=Meta-Llama-3-1-8B-Instruct-FP8
+      - OPENAI_API_KEY=
+    params:
+      storage:
+        data:
+          mount: /data
+          readOnly: false
+  qdrant:
+    image: qdrant/qdrant
+    expose:
+      - port: 6333
+        as: 6333
+        to:
+          - global: false
+    params:
+      storage:
+        data:
+          mount: /data
+          readOnly: false
+profiles:
+  compute:
+    lurkerllama:
+      resources:
+        cpu:
+          units: 1
+        memory:
+          size: 512Mi
+        storage:
+          - size: 10gb
+          - name: data
+            size: 10gb
+            attributes:
+              persistent: true
+              class: beta2
+    qdrant:
+      resources:
+        cpu:
+          units: 1
+        memory:
+          size: 512Mi
+        storage:
+          - size: 10gb
+          - name: data
+            size: 10gb
+            attributes:
+              persistent: true
+              class: beta2
+  placement:
+    dcloud:
+      pricing:
+        lurkerllama:
+          denom: uakt
+          amount: 10000
+        qdrant:
+          denom: uakt
+          amount: 10000
+deployment:
+  lurkerllama:
+    dcloud:
+      profile: lurkerllama
+      count: 1
+  qdrant:
+    dcloud:
+      profile: qdrant
+      count: 1

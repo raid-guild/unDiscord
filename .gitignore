@@ -1,5 +1,5 @@
 .env
-dockerfile
+docker-compose.yaml
 db.sqlite
 data.json
 raft_state.json

@@ -7,7 +7,5 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-# Akash chat does not currently provide any models to generate embedding. Therefore we need to add an OpenAI API key here
-ENV OPENAI_API_KEY=[Your API key]
 EXPOSE 8080
-ENTRYPOINT npm run dev
+ENTRYPOINT ["npm", "run", "dev"]

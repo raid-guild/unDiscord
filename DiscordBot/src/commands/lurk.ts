@@ -101,6 +101,10 @@ const lurk = async function(channel: TextChannel) {
  * @throws {Error} - If the export fails.
  */
 const archive = async function(channel: TextChannel, TOKEN: string = config.DISCORD_API_TOKEN, EXPORTFORMAT: string = 'json') {
+  if (!fs.existsSync(ARCHIVES_PATH)){
+    fs.mkdirSync(ARCHIVES_PATH);
+    fs.mkdirSync(ARCHIVES_PATH + '/raw');
+  }
   // Call the Discord Chat Exporter CLI tool
   const now = Date.now().toString();
   const command = `/opt/app/DiscordChatExporter.Cli export -t ${TOKEN} -c ${channel.id} -f ${EXPORTFORMAT} -o ${ARCHIVES_PATH + '/raw/' + channel.id  + '-' + now}.json`;

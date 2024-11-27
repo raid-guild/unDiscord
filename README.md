@@ -59,28 +59,52 @@ The bot doesn't have any isolation, so if you want to have one for your own disc
 The following environment variables will need to be set:
 
 *The Client Secret found in step 2 of creating the Discord Bot*
+
 **DISCORD_API_TOKEN** = [Your_token_goes_here]
 
+---
+
 *The Client Id found in step 2 of creating the Discord Bot*
+
 **DISCORD_CLIENT_ID**=[Your_client_id_goes_here]
 
+---
+
 *[See discord support for instructions on how to get the guild/server ID](https://support-dev.discord.com/hc/en-us/articles/360028717192-Where-can-I-find-my-Application-Team-Server-ID#:~:text=Right%2Dclick%20the%20server%20icon,seeing%20a%20Copy%20ID%20option)*
+
 **DISCORD_GUILD_ID**=[Your_guild_id_goes_here]
 
+---
+
 *If your Qdrant database requires an API key, enter it here. If you are using docker-compose as set up here, you do not need one*
+
 **QDRANT_KEY**=
 
+---
+
 *This is the URL for your qdrant database. If you are self-hosting qdrant as described keep this setting shown below. If you are using a cloud-hosted service use the url provided by your hosted qdrant instance*
+
 **QDRANT_URL**=http://qdrant:6333
 
+---
+
 *Your Akash Chat API key which you can generate [here](https://chatapi.akash.network/)*
+
 **AKASH_CHAT_API_KEY**=[Your_api_key_goes_here]
 
+---
+
 *Akash chat endpoint*
+
 **AKASH_CHAT_API_ENDPOINT**=https://chatapi.akash.network/api/v1
 
+---
+
 *The Akash Chat LLM that you want to use*  
+
 **AKASH_CHAT_API_MODEL**=Meta-Llama-3-1-8B-Instruct-FP8
+
+---
 
 *Akash chat does not currently provide any models to generate embedding. Therefore we need to add an OpenAI API key here (You may need to pay for credits)*
 
@@ -98,9 +122,8 @@ from [Bot Environment Variables](#bot-environment-variables)
 ## Deploying Locally
 **Note: You need Docker and Docker-compose installed**
 1. Run `git clone https://github.com/Fluffy9/LurkerLLama/`
-2. Rename docker-compose.example.yaml to docker-compose.yaml
-3. Edit the docker-compose.yaml.There are 9 environment variables with 3 already filled in. You need to fill in the other 6 with the info 
+3. Rename `docker-compose.example.yaml` to `docker-compose.yaml`
+4. Edit the docker-compose.yaml.There are 9 environment variables with 3 already filled in. You need to fill in the other 6 with the info 
 from [Bot Environment Variables](#bot-environment-variables) 
-
-4. In the root folder which contains the docker-compose file, run `docker-compose up` to start the application
+5. In the root folder which contains the docker-compose file, run `docker-compose up` to start the application
 

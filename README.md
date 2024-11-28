@@ -45,8 +45,10 @@ The bot doesn't have any isolation, so if you want to have one for your own disc
 
 ## Create the discord bot
 1. Click [on the discord developers page here](https://discord.com/developers) and follow the Build-A-Bot flow. You can use whatever name and images you want
-2. Go to the OAuth2 tab. Copy the **Client ID** and the **Client Secret**. You will need these for later use. 
-3. Scroll down and make sure the following **Scopes** and **Permissions** are checked. 
+2. Go to the OAuth2 tab. Save the **Client ID**.
+3. In the Bot tab, click `Reset Token` and save your **Bot Token**. You will need this for later use
+![image](https://github.com/user-attachments/assets/2a681305-a340-476c-89e5-f5f42e3bdad4)
+4. Scroll down and make sure the following **Scopes** and **Permissions** are checked. 
 * Scopes 
     - Bot Scope
     ![Scopes](./scopes.PNG)
@@ -56,9 +58,9 @@ The bot doesn't have any isolation, so if you want to have one for your own disc
     - Read Message History
     - View Channels
 ![Permissions](./bot-permissions.png)
-3. Scroll down and copy the invite link generated. You will need to click that and follow the prompts to invite it to your discord server
+3. Scroll down and click the invite link generated. You will now need to follow the prompts to invite it to your discord server
 ![image](https://github.com/user-attachments/assets/a9887151-eb6e-4dff-a41a-fbf49cb1fedb)
-4. Go to the Bot tab and turn on **Message Content Intent**
+4. Back in the Discord Developer Portal, go to the Bot tab and turn on **Message Content Intent**
 ![message content intent](image.png)
 5. Make sure you save your changes
 
@@ -67,7 +69,7 @@ The following environment variables will need to be set. For now, write them dow
 
 *The Client Secret found in step 2 of ["Create the discord bot"](#create-the-discord-bot)*
 
-**DISCORD_API_TOKEN** = [Your_token_goes_here]
+**DISCORD_API_TOKEN** = [Your_bot_token_goes_here]
 
 ---
 
@@ -131,6 +133,14 @@ from [Bot Environment Variables](#bot-environment-variables)
 1. Download the [docker-compose.example.yaml](https://github.com/Fluffy9/LurkerLLama/blob/main/docker-compose.example.yaml).
 3. Rename `docker-compose.example.yaml` to `docker-compose.yaml`
 4. Edit the docker-compose.yaml. There are 9 environment variables with 3 already filled in. You need to fill in the other 6 with the info 
-from [Bot Environment Variables](#bot-environment-variables) 
-5. In the root folder which contains the docker-compose file, run `docker-compose up` to start the application
+from [Bot Environment Variables](#bot-environment-variables)
+5. Create an empty folder named `data` that contains an empty directory named `storage` and another empty directory named `archives`. These will persist the Discord channel backups and the Sqlite/Qdrant databases
+![image](https://github.com/user-attachments/assets/14b5db9d-d2fb-47a1-9eb6-fd4195139a40)
+6. In the root folder which contains the docker-compose file, run `docker-compose up` to start the application
+
+## Troubleshooting
+- "I get permissions issues in the logs!" - This can be due to having incorrectly set the discord bot variables or from not having set the permissions shown. I've also seen this be a problem when you have really complex permissions on a channel that could potentially prevent the bot from being able to read it. 
+- "I can't invite the discord bot to my server!" - You need to use the link that includes OAuth permissions ([step 3 on "Create the discord bot"](#create-the-discord-bot))  
+- "The logs says it can't open the sqlite database!" - The directory structure is not correct or was incorrectly mounted. The application expects the archives folder to exist at /data/archives
+- "I'm getting error messages that says `Error inserting data: Error: SQLITE_IOERR: disk I/O error`" - This happens sometimes. You can try it again but certain types of messages just don't seem to work.
 

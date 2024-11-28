@@ -45,7 +45,7 @@ The bot doesn't have any isolation, so if you want to have one for your own disc
 
 ## Create the discord bot
 1. Click [on the discord developers page here](https://discord.com/developers) and follow the Build-A-Bot flow. You can use whatever name and images you want
-2. Go to the OAuth tab. Copy the **Client ID** and the **Client Secret**. You will need these for later use. 
+2. Go to the OAuth2 tab. Copy the **Client ID** and the **Client Secret**. You will need these for later use. 
 3. Scroll down and make sure the following **Scopes** and **Permissions** are checked. 
 * Scopes 
     - Bot Scope
@@ -56,22 +56,22 @@ The bot doesn't have any isolation, so if you want to have one for your own disc
     - Read Message History
     - View Channels
 ![Permissions](./bot-permissions.png)
-3. Go to the Bot tab and turn on **Message Content Intent**
-![message content intent](image.png)
-4. Scroll down and copy the invite link generated. You will need to click that and follow the prompts to invite it to your discord server
+3. Scroll down and copy the invite link generated. You will need to click that and follow the prompts to invite it to your discord server
 ![image](https://github.com/user-attachments/assets/a9887151-eb6e-4dff-a41a-fbf49cb1fedb)
+4. Go to the Bot tab and turn on **Message Content Intent**
+![message content intent](image.png)
 5. Make sure you save your changes
 
 ## Bot Environment Variables
-The following environment variables will need to be set:
+The following environment variables will need to be set. For now, write them down somewhere
 
-*The Client Secret found in step 2 of creating the Discord Bot*
+*The Client Secret found in step 2 of ["Create the discord bot"](#create-the-discord-bot)*
 
 **DISCORD_API_TOKEN** = [Your_token_goes_here]
 
 ---
 
-*The Client Id found in step 2 of creating the Discord Bot*
+*The Client Id found in step 2 of ["Create the discord bot"](#create-the-discord-bot)*
 
 **DISCORD_CLIENT_ID**=[Your_client_id_goes_here]
 
@@ -127,10 +127,10 @@ from [Bot Environment Variables](#bot-environment-variables)
 4. Follow the prompts to choose a provider and deploy
 
 ## Deploying Locally
-**Note: You need Docker and Docker-compose installed**
-1. Run `git clone https://github.com/Fluffy9/LurkerLLama/`
+**Note: You need Docker and Docker-compose installed and running**
+1. Download the [docker-compose.example.yaml](https://github.com/Fluffy9/LurkerLLama/blob/main/docker-compose.example.yaml).
 3. Rename `docker-compose.example.yaml` to `docker-compose.yaml`
-4. Edit the docker-compose.yaml.There are 9 environment variables with 3 already filled in. You need to fill in the other 6 with the info 
+4. Edit the docker-compose.yaml. There are 9 environment variables with 3 already filled in. You need to fill in the other 6 with the info 
 from [Bot Environment Variables](#bot-environment-variables) 
 5. In the root folder which contains the docker-compose file, run `docker-compose up` to start the application
 

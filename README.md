@@ -1,4 +1,4 @@
-# About LurkerLLama
+# LurkerLLama
 ![ieatbabies__A_kawaii_llama_wearing_sunglasses_drinking_a_cockt_d9803d31-19e3-4b6b-829e-42d4ddfa1ce7](https://github.com/user-attachments/assets/6e284a6c-8b74-498b-8df2-7edf6f355a26)
 
 The smartest llama to ever exist — lurks in your discord channels to archive and answer questions about past conversations 

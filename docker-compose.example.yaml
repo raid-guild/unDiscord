@@ -2,7 +2,7 @@
 --- 
 services:
   lurkerllama: 
-    build: ./DiscordBot
+    image: pupcakes/lurkerllama:latest
     container_name: LurkerLlama
     volumes:
       - ./data/archives:/data/archives

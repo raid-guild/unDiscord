@@ -1,3 +1,8 @@
+# About LurkerLLama
+![ieatbabies__A_kawaii_llama_wearing_sunglasses_drinking_a_cockt_d9803d31-19e3-4b6b-829e-42d4ddfa1ce7](https://github.com/user-attachments/assets/6e284a6c-8b74-498b-8df2-7edf6f355a26)
+
+The smartest llama to ever exist — lurks in your discord channels to archive and answer questions about past conversations 
+
 # Testing
 If you'd like to play with the bot, it is actively running in the [LLamaGarden Discord server](https://discord.gg/cs7VPXgu) where I am currently training it to answer questions about it's own installation process. If you have any questions about how it works, you can see if it has any insight before you ask me
 

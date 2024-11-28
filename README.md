@@ -58,7 +58,9 @@ The bot doesn't have any isolation, so if you want to have one for your own disc
 ![Permissions](./bot-permissions.png)
 3. Go to the Bot tab and turn on **Message Content Intent**
 ![message content intent](image.png)
-4. Make sure you save your changes
+4. Scroll down and copy the invite link generated. You will need to click that and follow the prompts to invite it to your discord server
+![image](https://github.com/user-attachments/assets/a9887151-eb6e-4dff-a41a-fbf49cb1fedb)
+5. Make sure you save your changes
 
 ## Bot Environment Variables
 The following environment variables will need to be set:

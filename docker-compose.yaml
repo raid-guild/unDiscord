@@ -1,15 +1,17 @@
-# Functions
---- 
 services:
-  lurkerllama: 
+  discord-exporter:
     build: ./DiscordBot
-    container_name: LurkerLlama
+    container_name: DiscordExporter
+    ports:
+      - "8080:8080"
     volumes:
       - ./data/archives:/data/archives
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: qdrant
-    ports:
-      - "6333:6333"
-    volumes:
-      - ./data/storage:/qdrant/storage
+    environment:
+      - DISCORD_API_TOKEN=${DISCORD_API_TOKEN}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
+      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID}
+      - DO_SPACES_KEY=${DO_SPACES_KEY}
+      - DO_SPACES_SECRET=${DO_SPACES_SECRET}
+      - DO_SPACES_ENDPOINT=${DO_SPACES_ENDPOINT}
+      - DO_SPACES_BUCKET=${DO_SPACES_BUCKET}
+      - DUNGEON_MASTER_CALLBACK_URL=${DUNGEON_MASTER_CALLBACK_URL}

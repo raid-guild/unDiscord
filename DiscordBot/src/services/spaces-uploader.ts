@@ -9,7 +9,9 @@ const s3Client = new S3Client({
   credentials: {
     accessKeyId: config.DO_SPACES_KEY as string,
     secretAccessKey: config.DO_SPACES_SECRET as string
-  }
+  },
+  // Fix for the hostname mismatch error
+  forcePathStyle: true
 });
 
 /**
@@ -38,7 +40,8 @@ export const uploadToSpaces = async (filePath: string, fileName: string): Promis
     await s3Client.send(new PutObjectCommand(params));
 
     // Construct and return the URL to the uploaded file
-    const spacesUrl = `https://${config.DO_SPACES_BUCKET}.${config.DO_SPACES_ENDPOINT?.replace('https://', '')}/discord-archives/${fileName}`;
+    // Use the correct URL format for DigitalOcean Spaces when using path-style access
+    const spacesUrl = `https://${config.DO_SPACES_ENDPOINT?.replace('https://', '')}/${config.DO_SPACES_BUCKET}/discord-archives/${fileName}`;
     
     console.log(`File uploaded successfully to: ${spacesUrl}`);
     return spacesUrl;

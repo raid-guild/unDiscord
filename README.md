@@ -105,9 +105,9 @@ When the export is complete, the service will call the `DUNGEON_MASTER_CALLBACK_
 
 If the export fails, the `success` field will be `false` and the `archiveUrl` field will be omitted.
 
-## Deployment on Akash Network
+## Deployment
 
-Follow the deployment guide in [AKASH_DEPLOYMENT.md](AKASH_DEPLOYMENT.md) for detailed instructions on deploying to Akash Network.
+Build a Docker container and deploy it as a Web Service on Render.com or other cloud provider of your choice.
 
 ## Troubleshooting
 

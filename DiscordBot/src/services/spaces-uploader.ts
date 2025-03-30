@@ -33,7 +33,7 @@ export const uploadToSpaces = async (filePath: string, channelName: string): Pro
     // Set up the upload parameters - upload directly to bucket root
     const params = {
       Bucket: config.DO_SPACES_BUCKET,
-      Key: fileName, // Direct upload to bucket root
+      Key: fileName,
       Body: fileContent,
       ACL: 'public-read',
       ContentType: 'text/html'
@@ -44,9 +44,13 @@ export const uploadToSpaces = async (filePath: string, channelName: string): Pro
 
     // Construct and return the URL to the uploaded file
     // Direct path to bucket root
-    const spacesUrl = `https://${config.DO_SPACES_ENDPOINT?.replace('https://', '')}/${config.DO_SPACES_BUCKET}/${fileName}`;
+    const spacesUrl = `https://${config.DO_SPACES_BUCKET}.${config.DO_SPACES_ENDPOINT?.replace('https://', '')}/${channelName}.html`;
     
     console.log(`File uploaded successfully to: ${spacesUrl}`);
+    console.log('Config bucket:', config.DO_SPACES_BUCKET);
+    console.log('Config endpoint:', config.DO_SPACES_ENDPOINT);
+    console.log('Upload key:', params.Key);
+    console.log('Generated URL:', spacesUrl);
     return spacesUrl;
   } catch (error) {
     console.error('Error uploading file to DigitalOcean Spaces:', error);

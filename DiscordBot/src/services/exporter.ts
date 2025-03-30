@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import axios from 'axios';
 import { config } from '../config';
 import { uploadToSpaces } from './spaces-uploader';
+import { Client, IntentsBitField } from 'discord.js';
 
 const exec = util.promisify(child_process.exec);
 
@@ -111,6 +112,35 @@ const notifyDungeonMaster = async (
 };
 
 /**
+ * Gets a channel name from Discord API
+ * @param channelId The Discord channel ID 
+ * @returns The channel name or default name if fetching fails
+ */
+const getChannelName = async (channelId: string): Promise<string> => {
+  try {
+    // Initialize Discord client
+    const client = new Client({
+      intents: [IntentsBitField.Flags.Guilds]
+    });
+    
+    await client.login(config.DISCORD_API_TOKEN);
+    
+    // Fetch the channel
+    const channel = await client.channels.fetch(channelId);
+    const channelName = channel?.name || `channel-${channelId}`;
+    
+    // Destroy the client when done
+    client.destroy();
+    
+    return channelName;
+  } catch (error) {
+    console.error('Error fetching channel name:', error);
+    // Return a fallback name if we can't fetch the channel
+    return `channel-${channelId}`;
+  }
+};
+
+/**
  * Exports a Discord channel to HTML and uploads it to DigitalOcean Spaces
  * @param channelId The Discord channel ID to export
  * @param guildId The Discord guild ID of the channel
@@ -124,10 +154,13 @@ export const exportChannel = async (channelId: string, guildId: string): Promise
       fs.mkdirSync(ARCHIVES_PATH, { recursive: true });
     }
 
-    // Generate a timestamp for the file name
+    // Get channel name for the file name
+    const channelName = await getChannelName(channelId);
+    
+    // Generate a timestamp for the temporary file name
     const timestamp = new Date().toISOString().replace(/[:\.]/g, '-');
-    const fileName = `${channelId}-${timestamp}.html`;
-    const filePath = path.join(ARCHIVES_PATH, fileName);
+    const tempFileName = `${channelId}-${timestamp}.html`;
+    const filePath = path.join(ARCHIVES_PATH, tempFileName);
 
     // Construct the Discord Chat Exporter command
     const command = `/opt/app/DiscordChatExporter.Cli export -t ${config.DISCORD_API_TOKEN} -c ${channelId} -f HtmlDark -o "${filePath}"`;
@@ -144,10 +177,10 @@ export const exportChannel = async (channelId: string, guildId: string): Promise
 
     // Check if the export was successful
     if (stdout.includes('Successfully exported')) {
-      await appendLog(`🟩 Successfully exported channel ${channelId} to ${fileName} - ${new Date().toISOString()}`);
+      await appendLog(`🟩 Successfully exported channel ${channelId} (${channelName}) - ${new Date().toISOString()}`);
       
       // Upload the file to DigitalOcean Spaces
-      const spacesUrl = await uploadToSpaces(filePath, fileName);
+      const spacesUrl = await uploadToSpaces(filePath, channelName);
       
       // Notify the Dungeon Master bot about the successful export
       await notifyDungeonMaster(channelId, guildId, true, spacesUrl);

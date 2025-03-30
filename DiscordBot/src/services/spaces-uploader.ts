@@ -17,20 +17,23 @@ const s3Client = new S3Client({
 /**
  * Uploads a file to DigitalOcean Spaces
  * @param filePath Local path to the file
- * @param fileName Desired name for the file in the Space
+ * @param channelName Name of the Discord channel
  * @returns URL to the uploaded file
  */
-export const uploadToSpaces = async (filePath: string, fileName: string): Promise<string> => {
+export const uploadToSpaces = async (filePath: string, channelName: string): Promise<string> => {
   try {
     console.log(`Uploading ${filePath} to DigitalOcean Spaces...`);
 
     // Read the file content
     const fileContent = fs.readFileSync(filePath);
     
-    // Set up the upload parameters
+    // Use simple filename format: channelName.html
+    const fileName = `${channelName}.html`;
+    
+    // Set up the upload parameters - upload directly to bucket root
     const params = {
       Bucket: config.DO_SPACES_BUCKET,
-      Key: `discord-archives/${fileName}`,
+      Key: fileName, // Direct upload to bucket root
       Body: fileContent,
       ACL: 'public-read',
       ContentType: 'text/html'
@@ -40,8 +43,8 @@ export const uploadToSpaces = async (filePath: string, fileName: string): Promis
     await s3Client.send(new PutObjectCommand(params));
 
     // Construct and return the URL to the uploaded file
-    // Use the correct URL format for DigitalOcean Spaces when using path-style access
-    const spacesUrl = `https://${config.DO_SPACES_ENDPOINT?.replace('https://', '')}/${config.DO_SPACES_BUCKET}/discord-archives/${fileName}`;
+    // Direct path to bucket root
+    const spacesUrl = `https://${config.DO_SPACES_ENDPOINT?.replace('https://', '')}/${config.DO_SPACES_BUCKET}/${fileName}`;
     
     console.log(`File uploaded successfully to: ${spacesUrl}`);
     return spacesUrl;

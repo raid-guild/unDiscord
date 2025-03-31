@@ -179,13 +179,14 @@ export const exportChannel = async (channelId: string, guildId: string): Promise
     if (stdout.includes('Successfully exported')) {
       await appendLog(`🟩 Successfully exported channel ${channelId} (${channelName}) - ${new Date().toISOString()}`);
       
-      // Upload the file to DigitalOcean Spaces
+      // Upload the file to DigitalOcean Spaces - pass the channel name
       const spacesUrl = await uploadToSpaces(filePath, channelName);
       
       // Notify the Dungeon Master bot about the successful export
       await notifyDungeonMaster(channelId, guildId, true, spacesUrl);
       
       return;
+
     } else {
       throw new Error(`Export failed: ${maskSensitiveInfo(stdout)}`);
     }

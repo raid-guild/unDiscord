@@ -105,9 +105,15 @@ When the export is complete, the service will call the `DUNGEON_MASTER_CALLBACK_
 
 If the export fails, the `success` field will be `false` and the `archiveUrl` field will be omitted.
 
-## Deployment
+## Deployment Options
 
-Build a Docker container and deploy it as a Web Service on Render.com or other cloud provider of your choice.
+### Using Docker Hub Image
+
+The Discord Channel Exporter is available as a pre-built Docker image:
+
+```bash
+docker pull sunsakis/discord-exporter:latest
+```
 
 ## Troubleshooting
 

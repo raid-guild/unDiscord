@@ -1,6 +1,6 @@
 services:
   discord-exporter:
-    build: ./DiscordBot
+    image: sunsakis/discord-exporter:latest
     container_name: DiscordExporter
     ports:
       - "8080:8080"

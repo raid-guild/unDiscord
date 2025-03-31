@@ -75,7 +75,7 @@ export const uploadToSpaces = async (filePath: string, channelName: string): Pro
     await s3Client.send(new PutObjectCommand(params));
 
     // Construct and return the URL to the uploaded file
-    const spacesUrl = `https://${config.DO_SPACES_BUCKET}.${config.DO_SPACES_ENDPOINT?.replace('https://', '')}/${simplifiedFileName}`;
+    const spacesUrl = `https://${config.DO_SPACES_ENDPOINT}/${simplifiedFileName}`;
     
     console.log(`File uploaded successfully to: ${spacesUrl}`);
     return spacesUrl;

@@ -257,8 +257,7 @@ const s3Client = new S3Client({
     accessKeyId: config.DO_SPACES_KEY as string,
     secretAccessKey: config.DO_SPACES_SECRET as string
   },
-  // Fix for the hostname mismatch error
-  forcePathStyle: true
+  forcePathStyle: true // Keep this true for upload, we'll handle URL construction separately
 });
 
 /**
@@ -295,6 +294,10 @@ const getChannelName = async (channelId: string): Promise<string> => {
  * @param filePath Local path to the file
  * @param channelName Name of the channel for the filename
  * @returns URL to the uploaded file
+ * 
+ * NOTE: For DigitalOcean Spaces, files are actually stored with the pattern:
+ * {bucketName}/{bucketName}/{fileName} rather than just {bucketName}/{fileName}
+ * This is accounted for in the URL construction.
  */
 export const uploadToSpaces = async (filePath: string, channelName: string): Promise<string> => {
   try {
@@ -308,25 +311,32 @@ export const uploadToSpaces = async (filePath: string, channelName: string): Pro
     const sanitizedChannelName = channelName.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
     const simplifiedFileName = `${sanitizedChannelName}.html`;
     
-    // Set up the upload parameters - upload directly to bucket root
+    // Set up the upload parameters
+    // IMPORTANT: Since the file is actually being stored at {bucketName}/{bucketName}/filename
+    // We need to remove this prefix from the Key to get the file in the root
     const params = {
       Bucket: config.DO_SPACES_BUCKET,
-      Key: simplifiedFileName, // Upload directly to the bucket root
+      // Specify the full path minus the bucket name prefix to get it in the root
+      Key: simplifiedFileName,
       Body: fileContent,
       ACL: 'public-read',
       ContentType: 'text/html'
     };
+    
+    console.log(`Upload parameters:`);
+    console.log(`Bucket: ${params.Bucket}`);
+    console.log(`Key: ${params.Key}`);
 
     // Upload the file
     await s3Client.send(new PutObjectCommand(params));
 
-    // Construct and return the URL to the uploaded file
-    // Format: https://<bucket-name>.<region>.digitaloceanspaces.com/<filename>
-    const endpointUrl = new URL(config.DO_SPACES_ENDPOINT as string);
-    const spacesUrl = `https://${config.DO_SPACES_BUCKET}.${endpointUrl.hostname}/${simplifiedFileName}`;
+    // IMPORTANT: Construct the URL to match the actual storage path structure
+    // in DigitalOcean Spaces
+    // Since files are actually stored at {bucketName}/{bucketName}/file, we need to include the path
+    const spacesUrl = `https://${config.DO_SPACES_BUCKET}.nyc3.digitaloceanspaces.com/${config.DO_SPACES_BUCKET}/${simplifiedFileName}`;
     
-    console.log(`File uploaded successfully to: ${spacesUrl}`);
-    console.log(`params: ${params}`)
+    console.log(`File uploaded successfully, should be accessible at: ${spacesUrl}`);
+    
     return spacesUrl;
   } catch (error) {
     console.error('Error uploading file to DigitalOcean Spaces:', error);

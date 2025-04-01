@@ -323,9 +323,10 @@ export const uploadToSpaces = async (filePath: string, channelName: string): Pro
     // Construct and return the URL to the uploaded file
     // Format: https://<bucket-name>.<region>.digitaloceanspaces.com/<filename>
     const endpointUrl = new URL(config.DO_SPACES_ENDPOINT as string);
-    const spacesUrl = `https://${endpointUrl.hostname}/${simplifiedFileName}`;
+    const spacesUrl = `https://${config.DO_SPACES_BUCKET}.${endpointUrl.hostname}/${simplifiedFileName}`;
     
     console.log(`File uploaded successfully to: ${spacesUrl}`);
+    console.log(`params: ${params}`)
     return spacesUrl;
   } catch (error) {
     console.error('Error uploading file to DigitalOcean Spaces:', error);

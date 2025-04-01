@@ -257,7 +257,7 @@ const s3Client = new S3Client({
     accessKeyId: config.DO_SPACES_KEY as string,
     secretAccessKey: config.DO_SPACES_SECRET as string
   },
-  forcePathStyle: true // Keep this true for upload, we'll handle URL construction separately
+  forcePathStyle: false
 });
 
 /**
@@ -332,8 +332,7 @@ export const uploadToSpaces = async (filePath: string, channelName: string): Pro
 
     // IMPORTANT: Construct the URL to match the actual storage path structure
     // in DigitalOcean Spaces
-    // Since files are actually stored at {bucketName}/{bucketName}/file, we need to include the path
-    const spacesUrl = `https://${config.DO_SPACES_BUCKET}.nyc3.digitaloceanspaces.com/${config.DO_SPACES_BUCKET}/${simplifiedFileName}`;
+    const spacesUrl = `https://${config.DO_SPACES_BUCKET}.nyc3.digitaloceanspaces.com/${simplifiedFileName}`;
     
     console.log(`File uploaded successfully, should be accessible at: ${spacesUrl}`);
     

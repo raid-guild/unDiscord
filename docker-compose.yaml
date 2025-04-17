@@ -1,7 +1,9 @@
 services:
-  discord-exporter:
-    image: sunsakis/discord-exporter:latest
-    container_name: DiscordExporter
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: undiscord:latest
     ports:
       - "8080:8080"
     volumes:

@@ -1,11 +1,3 @@
 .env
-docker-compose.yaml
-db.sqlite
-data.json
-raft_state.json
-data/archives/*
-data/storage/*
-collections
-aliases
 node_modules
-docker-compose.yaml
+data/archives/*

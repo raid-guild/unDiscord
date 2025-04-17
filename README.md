@@ -16,11 +16,10 @@ This service provides an API endpoint that exports Discord channels to HTML usin
 - Discord Bot Token with appropriate permissions
 - DigitalOcean Spaces account with access keys
 - Docker and Docker Compose (for local development)
-- Akash Network account (for production deployment)
 
 ## Environment Variables
 
-Create a `.env` file in the `DiscordBot` directory with the following variables:
+Create a `.env` file with the following variables:
 
 ```
 # Discord Bot Configuration
@@ -44,14 +43,16 @@ API_KEY=your_secure_random_api_key
 ## Local Development Setup
 
 1. Clone the repository:
+
    ```
    git clone <repository-url>
    cd unDiscord
    ```
 
-2. Create the `.env` file with your environment variables in the DiscordBot directory.
+2. Create the `.env` file with your environment variables in the project root directory.
 
 3. Build and start the service with Docker Compose:
+
    ```
    docker-compose up --build
    ```
@@ -61,12 +62,15 @@ API_KEY=your_secure_random_api_key
 ## API Endpoints
 
 ### Health Check
+
 ```
 GET /health
 ```
+
 Returns a 200 OK response if the service is running.
 
 ### Export Channel
+
 ```
 POST /export
 Content-Type: application/json

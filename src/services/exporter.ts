@@ -204,7 +204,7 @@ export const exportChannel = async (
       const spacesUrl = await uploadToSpaces(filePath, channelName);
 
       // Notify the Dungeon Master bot about the successful export
-      // await notifyDungeonMaster(channelId, guildId, true, spacesUrl);
+      await notifyDungeonMaster(channelId, guildId, true, spacesUrl);
 
       return;
     } else {

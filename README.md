@@ -49,7 +49,7 @@ API_KEY=your_secure_random_api_key
    cd unDiscord
    ```
 
-2. Create the `.env` file with your environment variables in the DiscordBot directory.
+2. Create the `.env` file with your environment variables in the project root directory.
 
 3. Build and start the service with Docker Compose:
 

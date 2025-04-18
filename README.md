@@ -22,6 +22,8 @@ This service provides an API endpoint that exports Discord channels to HTML usin
 Create a `.env` file with the following variables:
 
 ```
+VALHALLA_SITE=your_valhalla_site
+
 # Discord Bot Configuration
 DISCORD_API_TOKEN=your_discord_bot_token
 DISCORD_CLIENT_ID=your_discord_client_id

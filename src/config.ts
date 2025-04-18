@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const {
+  VALHALLA_SITE,
   DISCORD_API_TOKEN,
   DISCORD_CLIENT_ID,
   DISCORD_GUILD_ID,
@@ -14,6 +15,10 @@ const {
   DISCORD_VALHALLA_CATEGORY_ID,
   API_KEY,
 } = process.env;
+
+if (!VALHALLA_SITE) {
+  throw new Error("Missing VALHALLA_SITE environment variable");
+}
 
 // Check for required environment variables
 if (!DISCORD_API_TOKEN || !DISCORD_CLIENT_ID || !DISCORD_GUILD_ID) {
@@ -38,6 +43,7 @@ if (!API_KEY) {
 }
 
 export const config = {
+  VALHALLA_SITE,
   DISCORD_API_TOKEN,
   DISCORD_CLIENT_ID,
   DISCORD_GUILD_ID,

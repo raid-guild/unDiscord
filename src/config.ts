@@ -12,6 +12,7 @@ const {
   DO_SPACES_BUCKET,
   DISCORD_COMMAND_CENTER_ID,
   DISCORD_VALHALLA_CATEGORY_ID,
+  API_KEY,
 } = process.env;
 
 // Check for required environment variables
@@ -32,6 +33,10 @@ if (
   throw new Error("Missing DigitalOcean Spaces environment variables");
 }
 
+if (!API_KEY) {
+  throw new Error("Missing API key");
+}
+
 export const config = {
   DISCORD_API_TOKEN,
   DISCORD_CLIENT_ID,
@@ -42,4 +47,5 @@ export const config = {
   DO_SPACES_SECRET,
   DO_SPACES_ENDPOINT,
   DO_SPACES_BUCKET,
+  API_KEY,
 };

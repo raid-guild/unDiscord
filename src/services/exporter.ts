@@ -3,10 +3,22 @@ import * as child_process from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import axios from "axios";
 import { config } from "../config.js";
 import { uploadToSpaces } from "./spaces-uploader.js";
-import { Client, IntentsBitField, TextChannel } from "discord.js";
+import { discordLogger } from "@/utils/logger.js";
+import {
+  generateUniqueChannelName,
+  getChannelName,
+  maskSensitiveInfo,
+  sanitizeError,
+} from "../utils/helpers.js";
+import {
+  CategoryChannel,
+  Client,
+  IntentsBitField,
+  PermissionFlagsBits,
+  TextChannel,
+} from "discord.js";
 
 const exec = util.promisify(child_process.exec);
 
@@ -23,46 +35,6 @@ const ARCHIVES_PATH = path.join(
   "data",
   "archives"
 );
-
-/**
- * Masks sensitive information in a string
- * @param text The text that might contain sensitive information
- * @returns The text with sensitive information masked
- */
-const maskSensitiveInfo = (text: string): string => {
-  if (!text) return text;
-
-  // Create a copy to avoid modifying the original
-  let maskedText = text;
-
-  // Mask Discord tokens (typically in format: MTM1N...a8)
-  maskedText = maskedText.replace(
-    /(MT[A-Za-z0-9_-]{20,})\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27}/g,
-    "***DISCORD_TOKEN_MASKED***"
-  );
-
-  // Mask API keys for DO Spaces and other services
-  maskedText = maskedText.replace(
-    /([A-Za-z0-9]{20,})/g,
-    (match, p1, offset, string) => {
-      // Skip replacing if it's part of a file path
-      if (string.substr(Math.max(0, offset - 20), 40).includes("/")) {
-        return match;
-      }
-
-      // Only mask if it looks like an API key or token
-      if (/^[A-Za-z0-9+/=]{20,}$/.test(p1)) {
-        return "***API_KEY_MASKED***";
-      }
-
-      return match;
-    }
-  );
-
-  // Other sensitive info can be masked here
-
-  return maskedText;
-};
 
 /**
  * Logs a message to the log file
@@ -91,66 +63,271 @@ const appendLog = async (text: string): Promise<void> => {
 };
 
 /**
- * Notifies the Dungeon Master bot that the export is complete
+ * Moves exported channel to the Valhalla channel category and notifies user that the export is complete
  * @param channelId The channel ID that was exported
  * @param guildId The guild ID of the channel
  * @param success Whether the export was successful
  * @param archiveUrl The URL to the exported archive in DigitalOcean Spaces
  */
-const notifyDungeonMaster = async (
+const moveChannelToValhalla = async (
   channelId: string,
   guildId: string,
   success: boolean,
   archiveUrl?: string
 ): Promise<void> => {
   try {
-    await axios.post(config.DUNGEON_MASTER_CALLBACK_URL as string, {
-      channelId,
-      guildId,
-      success,
-      archiveUrl,
-    });
-
-    await appendLog(
-      `🟩 Callback to Dungeon Master successful for channel ${channelId} - ${new Date().toISOString()}`
-    );
-  } catch (error) {
-    await appendLog(
-      `🟥 Callback to Dungeon Master failed for channel ${channelId} - ${new Date().toISOString()}`
-    );
-    console.error("Error notifying Dungeon Master:", error);
-  }
-};
-
-/**
- * Gets a channel name from Discord API
- * @param channelId The Discord channel ID
- * @returns The channel name or default name if fetching fails
- */
-const getChannelName = async (channelId: string): Promise<string> => {
-  try {
-    // Initialize Discord client
     const client = new Client({
       intents: [IntentsBitField.Flags.Guilds],
     });
 
-    await client.login(config.DISCORD_API_TOKEN);
+    await client.login(process.env.DISCORD_API_TOKEN);
 
-    // Fetch the channel
-    const channel = await client.channels.fetch(channelId);
-    if (!channel || !channel.isTextBased()) {
-      throw new Error("Channel not found or not a text channel");
+    // Get the guild and channel
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) {
+      throw new Error(`Guild ${guildId} not found`);
     }
-    const channelName = (channel as TextChannel).name || `channel-${channelId}`;
 
-    // Destroy the client when done
-    client.destroy();
+    const channel = (await guild.channels.fetch(channelId)) as
+      | TextChannel
+      | undefined;
+    if (!channel) {
+      throw new Error(`Channel ${channelId} not found`);
+    }
 
-    return channelName;
+    if (!success) {
+      await channel.send({
+        embeds: [
+          {
+            title: "Channel Export Failed",
+            description:
+              "The export of this channel failed. Please try again later.",
+            color: 0xff3864,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      });
+      return;
+    }
+
+    await appendLog(
+      `🟩 Initiating archival of channel ${channelId} in Valhalla channel category ${
+        config.DISCORD_VALHALLA_CATEGORY_ID
+      } - ${new Date().toISOString()}`
+    );
+
+    // Check permissions before attempting to move the channel
+    if (!client.user) {
+      throw new Error("Client user is null");
+    }
+
+    const botMember = guild.members.cache.get(client.user.id);
+    if (!botMember) {
+      throw new Error(`Bot member not found in guild ${guild.name}`);
+    }
+
+    const botPermissions = channel.permissionsFor(botMember);
+    if (!botPermissions) {
+      throw new Error(
+        `Could not get permissions for bot in channel ${channel.name}`
+      );
+    }
+
+    const targetCategory = (await guild.channels.fetch(
+      config.DISCORD_VALHALLA_CATEGORY_ID
+    )) as CategoryChannel;
+
+    // Log detailed permission and role hierarchy information
+    const permissionDetails = {
+      channel: {
+        name: channel.name,
+        id: channel.id,
+        type: channel.type,
+        parentId: channel.parentId,
+      },
+      bot: {
+        id: botMember.id,
+        tag: botMember.user.tag,
+        roles: botMember.roles.cache.map((r) => ({
+          id: r.id,
+          name: r.name,
+          position: r.position,
+        })),
+        highestRole: {
+          id: botMember.roles.highest.id,
+          name: botMember.roles.highest.name,
+          position: botMember.roles.highest.position,
+        },
+      },
+      permissions: {
+        administrator: botPermissions.has(PermissionFlagsBits.Administrator),
+        manageChannels: botPermissions.has(PermissionFlagsBits.ManageChannels),
+        manageGuild: botPermissions.has(PermissionFlagsBits.ManageGuild),
+        viewChannel: botPermissions.has(PermissionFlagsBits.ViewChannel),
+      },
+      targetCategory: targetCategory
+        ? {
+            id: targetCategory.id,
+            name: targetCategory.name,
+            type: targetCategory.type,
+          }
+        : null,
+      targetCategoryId: config.DISCORD_VALHALLA_CATEGORY_ID,
+    };
+
+    discordLogger(
+      `Archive in Valhalla detailed permission check: ${JSON.stringify(
+        permissionDetails,
+        null,
+        2
+      )}`,
+      client
+    );
+
+    // Check if we can move the channel
+    if (!botPermissions.has(PermissionFlagsBits.ManageChannels)) {
+      discordLogger(
+        `Bot lacks MANAGE_CHANNELS permission for channel ${channel.name}`,
+        client
+      );
+
+      await channel.send({
+        embeds: [
+          {
+            title: "Channel Archival Failed",
+            description: `Bot lacks MANAGE_CHANNELS permission for channel ${channel.name}`,
+            color: 0xff3864,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      });
+      return;
+    }
+
+    if (!targetCategory) {
+      discordLogger(
+        `Valhalla category not found: ${config.DISCORD_VALHALLA_CATEGORY_ID}`,
+        client
+      );
+
+      await channel.send({
+        embeds: [
+          {
+            title: "Channel Archival Failed",
+            description: `Valhalla category not found: ${config.DISCORD_VALHALLA_CATEGORY_ID}`,
+            color: 0xff3864,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      });
+      return;
+    }
+
+    try {
+      // Generate a unique name if needed
+      const uniqueChannelName = generateUniqueChannelName(
+        channel.name,
+        targetCategory
+      );
+      const needsRename = uniqueChannelName !== channel.name;
+
+      // Log the planned action
+      discordLogger(
+        `Attempting to move channel ${channel.name}${
+          needsRename ? ` (will be renamed to ${uniqueChannelName})` : ""
+        } to Valhalla category`,
+        client
+      );
+
+      // First rename if necessary
+      if (needsRename) {
+        await channel.setName(uniqueChannelName);
+        discordLogger(
+          `Renamed channel from ${channel.name} to ${uniqueChannelName}`,
+          client
+        );
+      }
+
+      // Then move to Valhalla
+      await channel.setParent(config.DISCORD_VALHALLA_CATEGORY_ID);
+
+      discordLogger(
+        `Successfully moved channel ${uniqueChannelName} to Valhalla category`,
+        client
+      );
+
+      // Send a single message for successful archive and move
+      await channel.send({
+        embeds: [
+          {
+            title: "Channel Moved to Valhalla",
+            description: `This channel has been moved to Valhalla${
+              needsRename
+                ? ` and renamed to ${uniqueChannelName} to avoid naming conflicts`
+                : ""
+            }! A backup has been created and can be accessed here: ${archiveUrl}`,
+            color: 0xff3864,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      });
+    } catch (moveError) {
+      // Detailed error logging with sanitization
+      interface ErrorWithCode extends Error {
+        code?: number;
+        httpStatus?: number;
+        method?: string;
+        path?: string;
+      }
+
+      const errorDetails = sanitizeError(moveError as ErrorWithCode);
+
+      discordLogger(
+        `Detailed error moving channel to Valhalla: ${JSON.stringify(
+          errorDetails,
+          null,
+          2
+        )}`,
+        client
+      );
+
+      // Send a single message for archive but failed move
+      await channel.send({
+        embeds: [
+          {
+            title: "Channel Exported, but Not Moved to Valhalla",
+            description: `A backup of this channel has been created and can be accessed here: ${archiveUrl}\n\nThis channel could not be moved to Valhalla due to an error: ${errorDetails.message}`,
+            color: 0xff3864,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      });
+    }
+
+    await appendLog(
+      `🟩 Exporting channel ${channelId} succeeded, but archiving in Valhalla (archive) failed - ${new Date().toISOString()}`
+    );
   } catch (error) {
-    console.error("Error fetching channel name:", error);
-    // Return a fallback name if we can't fetch the channel
-    return `channel-${channelId}`;
+    await appendLog(
+      `🟥 Moving channel ${channelId} to Valhalla (archive) failed - ${new Date().toISOString()}`
+    );
+    console.error("Error in moveChannelToValhalla:", error);
+
+    const client = new Client({
+      intents: [IntentsBitField.Flags.Guilds],
+    });
+
+    await client.login(process.env.DISCORD_API_TOKEN);
+
+    const errorDetails = sanitizeError(error);
+    discordLogger(
+      `Error in moveChannelToValhalla: ${JSON.stringify(
+        errorDetails,
+        null,
+        2
+      )}`,
+      client
+    );
   }
 };
 
@@ -173,8 +350,14 @@ export const exportChannel = async (
       fs.mkdirSync(ARCHIVES_PATH, { recursive: true });
     }
 
+    const client = new Client({
+      intents: [IntentsBitField.Flags.Guilds],
+    });
+
+    await client.login(process.env.DISCORD_API_TOKEN);
+
     // Get channel name for the file name
-    const channelName = await getChannelName(channelId);
+    const channelName = await getChannelName(client, channelId);
 
     // Generate a timestamp for the temporary file name
     const timestamp = new Date().toISOString().replace(/[:\.]/g, "-");
@@ -203,8 +386,8 @@ export const exportChannel = async (
       // Upload the file to DigitalOcean Spaces - pass the channel name
       const spacesUrl = await uploadToSpaces(filePath, channelName);
 
-      // Notify the Dungeon Master bot about the successful export
-      await notifyDungeonMaster(channelId, guildId, true, spacesUrl);
+      // Notify user through Dungeon Master bot about the successful export
+      await moveChannelToValhalla(channelId, guildId, true, spacesUrl);
 
       return;
     } else {
@@ -221,7 +404,7 @@ export const exportChannel = async (
     );
 
     // Notify the Dungeon Master bot about the failed export
-    await notifyDungeonMaster(channelId, guildId, false);
+    await moveChannelToValhalla(channelId, guildId, false);
 
     throw error;
   }

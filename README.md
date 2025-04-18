@@ -6,7 +6,7 @@ This service provides an API endpoint that exports Discord channels to HTML usin
 
 - Export Discord channels to HTML using DiscordChatExporter CLI
 - Upload exported HTML files to DigitalOcean Spaces for permanent storage
-- Notify a callback URL when export completes (for integration with DungeonMaster bot)
+- Move exported channel to a Valhalla (archive) channel category
 - RESTful API for triggering exports
 - Secure environment variable configuration
 - Docker-based deployment
@@ -25,16 +25,17 @@ Create a `.env` file with the following variables:
 # Discord Bot Configuration
 DISCORD_API_TOKEN=your_discord_bot_token
 DISCORD_CLIENT_ID=your_discord_client_id
-DISCORD_GUILD_ID=your_guild_id_optional
+DISCORD_GUILD_ID=your_guild_id
+
+# Discord Channel IDs
+DISCORD_VALHALLA_CATEGORY_ID=your_discord_valhalla_category_id
+DISCORD_COMMAND_CENTER_ID=your_discord_command_center_id
 
 # DigitalOcean Spaces Configuration
 DO_SPACES_KEY=your_spaces_key
 DO_SPACES_SECRET=your_spaces_secret
 DO_SPACES_ENDPOINT=https://nyc3.digitaloceanspaces.com
 DO_SPACES_BUCKET=your_bucket_name
-
-# Dungeon Master Bot Callback
-DUNGEON_MASTER_CALLBACK_URL=https://your-dungeon-master-bot-endpoint.com/callback
 
 # Optional: Basic Auth (recommended for production)
 API_KEY=your_secure_random_api_key
@@ -96,18 +97,9 @@ The export endpoint returns a 202 Accepted response immediately and processes th
 }
 ```
 
-When the export is complete, the service will call the `DUNGEON_MASTER_CALLBACK_URL` with the following payload:
+When the export is complete, the service will move the channel to a Valhalla (archive) channel category.
 
-```json
-{
-  "channelId": "your_discord_channel_id",
-  "guildId": "your_discord_guild_id",
-  "success": true,
-  "archiveUrl": "https://your-bucket.nyc3.digitaloceanspaces.com/discord-archives/your_channel_id-timestamp.html"
-}
-```
-
-If the export fails, the `success` field will be `false` and the `archiveUrl` field will be omitted.
+If the export fails, the channel of the attempted export will be notified.
 
 ## Deployment Options
 

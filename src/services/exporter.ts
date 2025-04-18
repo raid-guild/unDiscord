@@ -305,7 +305,7 @@ const moveChannelToValhalla = async (
     }
 
     await appendLog(
-      `🟩 Exporting channel ${channelId} succeeded, but archiving in Valhalla (archive) failed - ${new Date().toISOString()}`
+      `🟩 Exporting and archiving channel ${channelId} succeeded - ${new Date().toISOString()}`
     );
   } catch (error) {
     await appendLog(

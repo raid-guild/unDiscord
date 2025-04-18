@@ -116,7 +116,7 @@ export const uploadToSpaces = async (
       Bucket: config.DO_SPACES_BUCKET,
       Key: uniqueFileName,
       Body: fileContent,
-      ACL: "public-read" as ObjectCannedACL,
+      ACL: "private" as ObjectCannedACL,
       ContentType: "text/html",
     };
 

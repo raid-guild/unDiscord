@@ -67,13 +67,11 @@ const appendLog = async (text: string): Promise<void> => {
  * @param channelId The channel ID that was exported
  * @param guildId The guild ID of the channel
  * @param success Whether the export was successful
- * @param archiveUrl The URL to the exported archive in DigitalOcean Spaces
  */
 const moveChannelToValhalla = async (
   channelId: string,
   guildId: string,
-  success: boolean,
-  archiveUrl?: string
+  success: boolean
 ): Promise<void> => {
   try {
     const client = new Client({
@@ -265,7 +263,9 @@ const moveChannelToValhalla = async (
               needsRename
                 ? ` and renamed to ${uniqueChannelName} to avoid naming conflicts`
                 : ""
-            }! A backup has been created and can be accessed here: ${archiveUrl}`,
+            }! A backup has been created and can be accessed here: ${
+              config.VALHALLA_SITE
+            }`,
             color: 0xff3864,
             timestamp: new Date().toISOString(),
           },
@@ -296,7 +296,7 @@ const moveChannelToValhalla = async (
         embeds: [
           {
             title: "Channel Exported, but Not Moved to Valhalla",
-            description: `A backup of this channel has been created and can be accessed here: ${archiveUrl}\n\nThis channel could not be moved to Valhalla due to an error: ${errorDetails.message}`,
+            description: `A backup of this channel has been created and can be accessed here: ${config.VALHALLA_SITE}\n\nThis channel could not be moved to Valhalla due to an error: ${errorDetails.message}`,
             color: 0xff3864,
             timestamp: new Date().toISOString(),
           },
@@ -384,10 +384,10 @@ export const exportChannel = async (
       );
 
       // Upload the file to DigitalOcean Spaces - pass the channel name
-      const spacesUrl = await uploadToSpaces(filePath, channelName);
+      await uploadToSpaces(filePath, channelName);
 
       // Move channel to Valhalla (archive) category
-      await moveChannelToValhalla(channelId, guildId, true, spacesUrl);
+      await moveChannelToValhalla(channelId, guildId, true);
 
       return;
     } else {

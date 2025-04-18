@@ -386,7 +386,7 @@ export const exportChannel = async (
       // Upload the file to DigitalOcean Spaces - pass the channel name
       const spacesUrl = await uploadToSpaces(filePath, channelName);
 
-      // Notify user through Dungeon Master bot about the successful export
+      // Move channel to Valhalla (archive) category
       await moveChannelToValhalla(channelId, guildId, true, spacesUrl);
 
       return;
@@ -403,7 +403,7 @@ export const exportChannel = async (
       )} - ${new Date().toISOString()}`
     );
 
-    // Notify the Dungeon Master bot about the failed export
+    // Notify channel about the failed export
     await moveChannelToValhalla(channelId, guildId, false);
 
     throw error;

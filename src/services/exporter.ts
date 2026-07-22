@@ -19,6 +19,7 @@ import {
   PermissionFlagsBits,
   TextChannel,
 } from "discord.js";
+import { mergeThreadsInDirectory } from "./thread-merger.js";
 
 const exec = util.promisify(child_process.exec);
 
@@ -361,11 +362,11 @@ export const exportChannel = async (
 
     // Generate a timestamp for the temporary file name
     const timestamp = new Date().toISOString().replace(/[:\.]/g, "-");
-    const tempFileName = `${channelId}-${timestamp}.html`;
-    const filePath = path.join(ARCHIVES_PATH, tempFileName);
+    const tempDirectoryName = `${channelId}-${timestamp}/`;
+    const directoryPath = path.join(ARCHIVES_PATH, tempDirectoryName);
 
     // Construct the Discord Chat Exporter command
-    const command = `/opt/app/DiscordChatExporter.Cli export -t ${config.DISCORD_API_TOKEN} -c ${channelId} -f HtmlDark -o "${filePath}"`;
+    const command = `/opt/app/DiscordChatExporter.Cli export -t ${config.DISCORD_API_TOKEN} -c ${channelId} -f HtmlDark -o "${directoryPath}" --include-threads all`;
 
     // Log the command with masked sensitive information
     console.log(`Executing command: ${maskSensitiveInfo(command)}`);
@@ -383,8 +384,10 @@ export const exportChannel = async (
         `🟩 Successfully exported channel ${channelId} (${channelName}) - ${new Date().toISOString()}`
       );
 
+      const mergedFilePath = await mergeThreadsInDirectory(directoryPath);
+
       // Upload the file to DigitalOcean Spaces - pass the channel name
-      await uploadToSpaces(filePath, channelName);
+      await uploadToSpaces(mergedFilePath, channelName);
 
       // Move channel to Valhalla (archive) category
       await moveChannelToValhalla(channelId, guildId, true);

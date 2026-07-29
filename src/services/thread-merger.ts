@@ -53,6 +53,29 @@ const findMatchingDivEnd = (html: string, openTagStart: number): number => {
 };
 
 /**
+ * Removes a single message container from a message group's HTML.
+ * @param groupHtml The message group markup
+ * @param messageId The message ID whose container should be removed
+ * @returns The group HTML without that container
+ */
+const stripMessageContainer = (groupHtml: string, messageId: string): string => {
+  const containerRegex = new RegExp(
+    `<div id=chatlog__message-container-${messageId}\\b`
+  );
+  const containerMatch = groupHtml.match(containerRegex);
+  if (!containerMatch || containerMatch.index === undefined) {
+    return groupHtml;
+  }
+
+  const end = findMatchingDivEnd(groupHtml, containerMatch.index);
+  if (end === -1) {
+    return groupHtml;
+  }
+
+  return groupHtml.slice(0, containerMatch.index) + groupHtml.slice(end);
+};
+
+/**
  * Extracts the inner HTML of the `<div class="chatlog">` container.
  * @param html The full document HTML
  * @returns The message groups markup between the chatlog open and close tags
@@ -258,16 +281,16 @@ export const mergeThreadsInDirectory = async (
     const chatlogInner = extractChatlogInner(thread.html);
     const groups = extractMessageGroups(chatlogInner);
 
-    // Drop the starter message group; it already exists in the main export.
-    const replyGroups = groups.filter(
-      (group) => !(group.ids.length === 1 && group.ids[0] === parentId)
-    );
+    // Strip only the starter message's container; it already exists in the main
+    // export. Keep co-grouped follow-ups from the same author.
+    const strippedGroups = groups
+      .map((group) => stripMessageContainer(group.html, parentId))
+      .filter((html) => /data-message-id=\d+/.test(html));
 
-    const bodyHtml = replyGroups.map((group) => group.html).join("\n");
-    const replyCount = replyGroups.reduce(
-      (total, group) => total + group.ids.length,
-      0
-    );
+    const bodyHtml = strippedGroups.join("\n");
+    const replyCount =
+      groups.reduce((total, group) => total + group.ids.length, 0) -
+      (groups.some((group) => group.ids.includes(parentId)) ? 1 : 0);
 
     const threadName = getThreadName(thread.html, thread.fileName);
     const detailsHtml = buildThreadDetails(threadName, replyCount, bodyHtml);

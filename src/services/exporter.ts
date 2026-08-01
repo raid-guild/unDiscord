@@ -260,20 +260,18 @@ const moveChannelToValhalla = async (
 
     } catch (moveError) {
       const errorDetails = sanitizeError(moveError);
+      const maskedErrorDetails = maskSensitiveInfo(
+        JSON.stringify(errorDetails, null, 2)
+      );
+      const maskedErrorMessage = maskSensitiveInfo(errorDetails.message);
 
       discordLogger(
-        `Detailed error moving channel to Valhalla: ${JSON.stringify(
-          errorDetails,
-          null,
-          2
-        )}`,
+        `Detailed error moving channel to Valhalla: ${maskedErrorDetails}`,
         client
       );
 
       await appendLog(
-        `🟥 Exported channel ${channelId}, but failed to move it to Valhalla: ${maskSensitiveInfo(
-          errorDetails.message
-        )} - ${new Date().toISOString()}`
+        `🟥 Exported channel ${channelId}, but failed to move it to Valhalla: ${maskedErrorMessage} - ${new Date().toISOString()}`
       );
 
       try {
@@ -281,7 +279,7 @@ const moveChannelToValhalla = async (
           embeds: [
             {
               title: "Channel Exported, but Not Moved to Valhalla",
-              description: `A backup of this channel has been created and can be accessed here: ${config.VALHALLA_SITE}\n\nThis channel could not be moved to Valhalla due to an error: ${errorDetails.message}`,
+              description: `A backup of this channel has been created and can be accessed here: ${config.VALHALLA_SITE}\n\nThis channel could not be moved to Valhalla due to an error: ${maskedErrorMessage}`,
               color: 0xff3864,
               timestamp: new Date().toISOString(),
             },
@@ -289,12 +287,11 @@ const moveChannelToValhalla = async (
         });
       } catch (notificationError) {
         const notificationErrorDetails = sanitizeError(notificationError);
+        const maskedNotificationErrorDetails = maskSensitiveInfo(
+          JSON.stringify(notificationErrorDetails, null, 2)
+        );
         discordLogger(
-          `Failed to send Valhalla move failure notification: ${JSON.stringify(
-            notificationErrorDetails,
-            null,
-            2
-          )}`,
+          `Failed to send Valhalla move failure notification: ${maskedNotificationErrorDetails}`,
           client
         );
       }
@@ -321,12 +318,11 @@ const moveChannelToValhalla = async (
       });
     } catch (notificationError) {
       const notificationErrorDetails = sanitizeError(notificationError);
+      const maskedNotificationErrorDetails = maskSensitiveInfo(
+        JSON.stringify(notificationErrorDetails, null, 2)
+      );
       discordLogger(
-        `Channel ${uniqueChannelName} was moved to Valhalla, but the completion notification failed: ${JSON.stringify(
-          notificationErrorDetails,
-          null,
-          2
-        )}`,
+        `Channel ${uniqueChannelName} was moved to Valhalla, but the completion notification failed: ${maskedNotificationErrorDetails}`,
         client
       );
       await appendLog(
@@ -352,12 +348,11 @@ const moveChannelToValhalla = async (
     await client.login(process.env.DISCORD_API_TOKEN);
 
     const errorDetails = sanitizeError(error);
+    const maskedErrorDetails = maskSensitiveInfo(
+      JSON.stringify(errorDetails, null, 2)
+    );
     discordLogger(
-      `Error in moveChannelToValhalla: ${JSON.stringify(
-        errorDetails,
-        null,
-        2
-      )}`,
+      `Error in moveChannelToValhalla: ${maskedErrorDetails}`,
       client
     );
   }

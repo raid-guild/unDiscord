@@ -222,13 +222,16 @@ const moveChannelToValhalla = async (
       return;
     }
 
+    let uniqueChannelName = channel.name;
+    let needsRename = false;
+
     try {
       // Generate a unique name if needed
-      const uniqueChannelName = generateUniqueChannelName(
+      uniqueChannelName = generateUniqueChannelName(
         channel.name,
         targetCategory
       );
-      const needsRename = uniqueChannelName !== channel.name;
+      needsRename = uniqueChannelName !== channel.name;
 
       // Log the planned action
       discordLogger(
@@ -255,7 +258,51 @@ const moveChannelToValhalla = async (
         client
       );
 
-      // Send a single message for successful archive and move
+    } catch (moveError) {
+      const errorDetails = sanitizeError(moveError);
+
+      discordLogger(
+        `Detailed error moving channel to Valhalla: ${JSON.stringify(
+          errorDetails,
+          null,
+          2
+        )}`,
+        client
+      );
+
+      await appendLog(
+        `🟥 Exported channel ${channelId}, but failed to move it to Valhalla: ${maskSensitiveInfo(
+          errorDetails.message
+        )} - ${new Date().toISOString()}`
+      );
+
+      try {
+        await channel.send({
+          embeds: [
+            {
+              title: "Channel Exported, but Not Moved to Valhalla",
+              description: `A backup of this channel has been created and can be accessed here: ${config.VALHALLA_SITE}\n\nThis channel could not be moved to Valhalla due to an error: ${errorDetails.message}`,
+              color: 0xff3864,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        });
+      } catch (notificationError) {
+        const notificationErrorDetails = sanitizeError(notificationError);
+        discordLogger(
+          `Failed to send Valhalla move failure notification: ${JSON.stringify(
+            notificationErrorDetails,
+            null,
+            2
+          )}`,
+          client
+        );
+      }
+
+      return;
+    }
+
+    try {
       await channel.send({
         embeds: [
           {
@@ -272,37 +319,21 @@ const moveChannelToValhalla = async (
           },
         ],
       });
-    } catch (moveError) {
-      // Detailed error logging with sanitization
-      interface ErrorWithCode extends Error {
-        code?: number;
-        httpStatus?: number;
-        method?: string;
-        path?: string;
-      }
-
-      const errorDetails = sanitizeError(moveError as ErrorWithCode);
-
+    } catch (notificationError) {
+      const notificationErrorDetails = sanitizeError(notificationError);
       discordLogger(
-        `Detailed error moving channel to Valhalla: ${JSON.stringify(
-          errorDetails,
+        `Channel ${uniqueChannelName} was moved to Valhalla, but the completion notification failed: ${JSON.stringify(
+          notificationErrorDetails,
           null,
           2
         )}`,
         client
       );
-
-      // Send a single message for archive but failed move
-      await channel.send({
-        embeds: [
-          {
-            title: "Channel Exported, but Not Moved to Valhalla",
-            description: `A backup of this channel has been created and can be accessed here: ${config.VALHALLA_SITE}\n\nThis channel could not be moved to Valhalla due to an error: ${errorDetails.message}`,
-            color: 0xff3864,
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      });
+      await appendLog(
+        `🟨 Exported and archived channel ${channelId}, but failed to send the completion notification: ${maskSensitiveInfo(
+          notificationErrorDetails.message
+        )} - ${new Date().toISOString()}`
+      );
     }
 
     await appendLog(

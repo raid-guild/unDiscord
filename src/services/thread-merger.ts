@@ -279,7 +279,29 @@ export const mergeThreadsInDirectory = async (
     }
 
     const chatlogInner = extractChatlogInner(thread.html);
+    if (thread.messageIds.size > 0 && chatlogInner.length === 0) {
+      throw new Error(
+        `Could not extract chatlog content from thread export: ${thread.fileName}`
+      );
+    }
+
     const groups = extractMessageGroups(chatlogInner);
+    if (thread.messageIds.size > 0 && groups.length === 0) {
+      throw new Error(
+        `Could not extract message groups from thread export: ${thread.fileName}`
+      );
+    }
+
+    const extractedMessageIds = new Set(groups.flatMap((group) => group.ids));
+    const missingMessageIds = [...thread.messageIds].filter(
+      (messageId) => !extractedMessageIds.has(messageId)
+    );
+    if (missingMessageIds.length > 0) {
+      throw new Error(
+        `Could not extract all messages from thread export ${thread.fileName}; ` +
+          `missing message IDs: ${missingMessageIds.join(", ")}`
+      );
+    }
 
     // Strip only the starter message's container; it already exists in the main
     // export. Keep co-grouped follow-ups from the same author.
@@ -297,10 +319,9 @@ export const mergeThreadsInDirectory = async (
 
     const updated = insertThreadUnderMessage(mergedHtml, parentId, detailsHtml);
     if (updated === null) {
-      console.warn(
-        `Parent message ${parentId} for thread "${thread.fileName}" was not found in the main export; skipping.`
+      throw new Error(
+        `Parent message ${parentId} for thread "${thread.fileName}" was not found in the main export`
       );
-      continue;
     }
 
     mergedHtml = updated;

@@ -410,7 +410,10 @@ export const exportChannel = async (
         `🟩 Successfully exported channel ${channelId} (${channelName}) - ${new Date().toISOString()}`
       );
 
-      const mergedFilePath = await mergeThreadsInDirectory(directoryPath);
+      const mergedFilePath = await mergeThreadsInDirectory(
+        directoryPath,
+        channelId
+      );
 
       // Upload the file to DigitalOcean Spaces - pass the channel name
       await uploadToSpaces(mergedFilePath, channelName);

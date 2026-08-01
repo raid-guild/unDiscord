@@ -54,7 +54,7 @@ test("merges replies and removes only the duplicated starter message", async () 
     )
   );
 
-  const outputPath = await mergeThreadsInDirectory(directory);
+  const outputPath = await mergeThreadsInDirectory(directory, "100");
   const merged = await readFile(outputPath, "utf8");
 
   assert.match(merged, /Thread: thread — 2 messages/);
@@ -86,7 +86,7 @@ test("rejects a thread whose parent message is absent from the main export", asy
   );
 
   await assert.rejects(
-    mergeThreadsInDirectory(directory),
+    mergeThreadsInDirectory(directory, "100"),
     /Parent message 200 .* was not found in the main export/
   );
 });
@@ -111,7 +111,7 @@ test("rejects non-empty thread exports when the chatlog markup cannot be parsed"
   );
 
   await assert.rejects(
-    mergeThreadsInDirectory(directory),
+    mergeThreadsInDirectory(directory, "100"),
     /Could not extract chatlog content from thread export/
   );
 });
@@ -136,7 +136,31 @@ test("rejects partial message-group parsing instead of dropping replies", async 
   );
 
   await assert.rejects(
-    mergeThreadsInDirectory(directory),
+    mergeThreadsInDirectory(directory, "100"),
     /Could not extract all messages .* missing message IDs: 201/
   );
+});
+
+test("identifies the main export when thread exports omit their starter messages", async () => {
+  const directory = await createDirectory();
+  const mainFile = "Guild - channel [100].html";
+
+  await writeFile(
+    path.join(directory, mainFile),
+    exportHtml("Guild / channel", messageGroup(messageContainer("200", "starter")))
+  );
+  await writeFile(
+    path.join(directory, "Guild - channel - thread [200].html"),
+    exportHtml(
+      "Guild / channel / thread",
+      messageGroup(messageContainer("201", "reply"))
+    )
+  );
+
+  const outputPath = await mergeThreadsInDirectory(directory, "100");
+  const merged = await readFile(outputPath, "utf8");
+
+  assert.match(merged, /Thread: thread — 1 message/);
+  assert.match(merged, /data-message-id=200\b/);
+  assert.match(merged, /data-message-id=201\b/);
 });

@@ -230,16 +230,18 @@ const insertThreadUnderMessage = (
  * merged HTML file where each thread export is embedded as a collapsible
  * section beneath the message it was started from.
  *
- * The main channel export is identified as the file whose trailing ID (the
- * channel ID) does not appear as a message within its own content. Every other
- * HTML file is treated as a thread export, and its trailing ID is the ID of the
- * starter message in the main export that the thread belongs to.
+ * The main channel export is identified by matching the trailing ID in its file
+ * name to the requested channel ID. Every other HTML file is treated as a
+ * thread export, and its trailing ID is the ID of the starter message in the
+ * main export that the thread belongs to.
  *
  * @param directory The directory to scan for the main and thread HTML exports
+ * @param channelId The ID of the exported main channel
  * @returns The absolute path to the newly created merged HTML file
  */
 export const mergeThreadsInDirectory = async (
-  directory: string
+  directory: string,
+  channelId: string
 ): Promise<string> => {
   const htmlFiles = fs
     .readdirSync(directory)
@@ -253,15 +255,11 @@ export const mergeThreadsInDirectory = async (
 
   const exports = htmlFiles.map(parseExport);
 
-  // The main export's trailing ID is a channel ID, so it is not one of its own
-  // messages. A thread export always contains its starter message (its ID).
-  const mainCandidates = exports.filter(
-    (exp) => !exp.trailingId || !exp.messageIds.has(exp.trailingId)
-  );
+  const mainCandidates = exports.filter((exp) => exp.trailingId === channelId);
 
   if (mainCandidates.length !== 1) {
     throw new Error(
-      `Expected exactly one main channel export, found ${mainCandidates.length}. ` +
+      `Expected exactly one main channel export for channel ${channelId}, found ${mainCandidates.length}. ` +
         `Candidates: ${mainCandidates.map((c) => c.fileName).join(", ") || "none"}`
     );
   }

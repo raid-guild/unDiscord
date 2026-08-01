@@ -5,7 +5,8 @@
   "author": {
     "name": "RaidGuild"
   },
-  "main": "index.js",
+  "packageManager": "pnpm@10.26.0",
+  "main": "dist/index.js",
   "type": "module",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.511.0",
@@ -22,7 +23,12 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsx dist/index.ts",
-    "build": "tsup src/index.ts --minify"
+    "start": "node dist/index.js",
+    "build": "tsup src/index.ts --format esm --minify",
+    "test": "node --import tsx --test tests/thread-merger.test.ts",
+    "typecheck": "tsc -p tsconfig.tests.json"
+  },
+  "engines": {
+    "pnpm": ">=10.26.0"
   }
 }

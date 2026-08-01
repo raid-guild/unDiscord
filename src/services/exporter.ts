@@ -19,6 +19,7 @@ import {
   PermissionFlagsBits,
   TextChannel,
 } from "discord.js";
+import { mergeThreadsInDirectory } from "./thread-merger.js";
 
 const exec = util.promisify(child_process.exec);
 
@@ -221,13 +222,16 @@ const moveChannelToValhalla = async (
       return;
     }
 
+    let uniqueChannelName = channel.name;
+    let needsRename = false;
+
     try {
       // Generate a unique name if needed
-      const uniqueChannelName = generateUniqueChannelName(
+      uniqueChannelName = generateUniqueChannelName(
         channel.name,
         targetCategory
       );
-      const needsRename = uniqueChannelName !== channel.name;
+      needsRename = uniqueChannelName !== channel.name;
 
       // Log the planned action
       discordLogger(
@@ -254,7 +258,48 @@ const moveChannelToValhalla = async (
         client
       );
 
-      // Send a single message for successful archive and move
+    } catch (moveError) {
+      const errorDetails = sanitizeError(moveError);
+      const maskedErrorDetails = maskSensitiveInfo(
+        JSON.stringify(errorDetails, null, 2)
+      );
+      const maskedErrorMessage = maskSensitiveInfo(errorDetails.message);
+
+      discordLogger(
+        `Detailed error moving channel to Valhalla: ${maskedErrorDetails}`,
+        client
+      );
+
+      await appendLog(
+        `🟥 Exported channel ${channelId}, but failed to move it to Valhalla: ${maskedErrorMessage} - ${new Date().toISOString()}`
+      );
+
+      try {
+        await channel.send({
+          embeds: [
+            {
+              title: "Channel Exported, but Not Moved to Valhalla",
+              description: `A backup of this channel has been created and can be accessed here: ${config.VALHALLA_SITE}\n\nThis channel could not be moved to Valhalla due to an error: ${maskedErrorMessage}`,
+              color: 0xff3864,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        });
+      } catch (notificationError) {
+        const notificationErrorDetails = sanitizeError(notificationError);
+        const maskedNotificationErrorDetails = maskSensitiveInfo(
+          JSON.stringify(notificationErrorDetails, null, 2)
+        );
+        discordLogger(
+          `Failed to send Valhalla move failure notification: ${maskedNotificationErrorDetails}`,
+          client
+        );
+      }
+
+      return;
+    }
+
+    try {
       await channel.send({
         embeds: [
           {
@@ -271,37 +316,20 @@ const moveChannelToValhalla = async (
           },
         ],
       });
-    } catch (moveError) {
-      // Detailed error logging with sanitization
-      interface ErrorWithCode extends Error {
-        code?: number;
-        httpStatus?: number;
-        method?: string;
-        path?: string;
-      }
-
-      const errorDetails = sanitizeError(moveError as ErrorWithCode);
-
+    } catch (notificationError) {
+      const notificationErrorDetails = sanitizeError(notificationError);
+      const maskedNotificationErrorDetails = maskSensitiveInfo(
+        JSON.stringify(notificationErrorDetails, null, 2)
+      );
       discordLogger(
-        `Detailed error moving channel to Valhalla: ${JSON.stringify(
-          errorDetails,
-          null,
-          2
-        )}`,
+        `Channel ${uniqueChannelName} was moved to Valhalla, but the completion notification failed: ${maskedNotificationErrorDetails}`,
         client
       );
-
-      // Send a single message for archive but failed move
-      await channel.send({
-        embeds: [
-          {
-            title: "Channel Exported, but Not Moved to Valhalla",
-            description: `A backup of this channel has been created and can be accessed here: ${config.VALHALLA_SITE}\n\nThis channel could not be moved to Valhalla due to an error: ${errorDetails.message}`,
-            color: 0xff3864,
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      });
+      await appendLog(
+        `🟨 Exported and archived channel ${channelId}, but failed to send the completion notification: ${maskSensitiveInfo(
+          notificationErrorDetails.message
+        )} - ${new Date().toISOString()}`
+      );
     }
 
     await appendLog(
@@ -320,12 +348,11 @@ const moveChannelToValhalla = async (
     await client.login(process.env.DISCORD_API_TOKEN);
 
     const errorDetails = sanitizeError(error);
+    const maskedErrorDetails = maskSensitiveInfo(
+      JSON.stringify(errorDetails, null, 2)
+    );
     discordLogger(
-      `Error in moveChannelToValhalla: ${JSON.stringify(
-        errorDetails,
-        null,
-        2
-      )}`,
+      `Error in moveChannelToValhalla: ${maskedErrorDetails}`,
       client
     );
   }
@@ -361,11 +388,11 @@ export const exportChannel = async (
 
     // Generate a timestamp for the temporary file name
     const timestamp = new Date().toISOString().replace(/[:\.]/g, "-");
-    const tempFileName = `${channelId}-${timestamp}.html`;
-    const filePath = path.join(ARCHIVES_PATH, tempFileName);
+    const tempDirectoryName = `${channelId}-${timestamp}/`;
+    const directoryPath = path.join(ARCHIVES_PATH, tempDirectoryName);
 
     // Construct the Discord Chat Exporter command
-    const command = `/opt/app/DiscordChatExporter.Cli export -t ${config.DISCORD_API_TOKEN} -c ${channelId} -f HtmlDark -o "${filePath}"`;
+    const command = `/opt/app/DiscordChatExporter.Cli export -t ${config.DISCORD_API_TOKEN} -c ${channelId} -f HtmlDark -o "${directoryPath}" --include-threads all`;
 
     // Log the command with masked sensitive information
     console.log(`Executing command: ${maskSensitiveInfo(command)}`);
@@ -383,8 +410,10 @@ export const exportChannel = async (
         `🟩 Successfully exported channel ${channelId} (${channelName}) - ${new Date().toISOString()}`
       );
 
+      const mergedFilePath = await mergeThreadsInDirectory(directoryPath);
+
       // Upload the file to DigitalOcean Spaces - pass the channel name
-      await uploadToSpaces(filePath, channelName);
+      await uploadToSpaces(mergedFilePath, channelName);
 
       // Move channel to Valhalla (archive) category
       await moveChannelToValhalla(channelId, guildId, true);

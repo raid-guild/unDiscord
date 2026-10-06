@@ -22,6 +22,9 @@ const THREAD_STYLE = [
   ".chatlog__thread>summary::before{content:\"\\25B6\";display:inline-block;margin-right:0.4rem;font-size:0.7rem;transition:transform 0.15s ease}",
   ".chatlog__thread[open]>summary::before{transform:rotate(90deg)}",
   ".chatlog__thread-content{padding:0.25rem 0.6rem 0.5rem}",
+  ".chatlog__unattached-threads{margin-top:2rem}",
+  ".chatlog__unattached-threads>h2{font-size:1rem;color:#dcddde}",
+  ".chatlog__unattached-threads .chatlog__thread{margin-left:0}",
 ].join("");
 
 /**
@@ -94,6 +97,28 @@ const extractChatlogInner = (html: string): string => {
 
   // chatlogEnd points past the closing </div>; strip that tag off.
   return html.slice(contentStart, chatlogEnd - "</div>".length);
+};
+
+/** Appends standalone thread sections inside the main chatlog container. */
+const appendUnattachedThreads = (html: string, threads: string[]): string => {
+  const openMatch = html.match(/<div class=(?:"chatlog"|chatlog)>/);
+  const chatlogEnd =
+    openMatch?.index === undefined
+      ? -1
+      : findMatchingDivEnd(html, openMatch.index);
+
+  if (chatlogEnd === -1) {
+    throw new Error("Could not locate main chatlog to preserve unattached threads");
+  }
+
+  const insertAt = chatlogEnd - "</div>".length;
+  const section =
+    `<section class=chatlog__unattached-threads>` +
+    `<h2>Threads with unavailable parent messages</h2>` +
+    threads.join("\n") +
+    `</section>`;
+
+  return html.slice(0, insertAt) + section + html.slice(insertAt);
 };
 
 /**
@@ -176,18 +201,20 @@ const getThreadName = (html: string, fallback: string): string => {
 /**
  * Builds the collapsible `<details>` block for a thread.
  * @param threadName The thread's display name
- * @param replyCount The number of messages inside the thread (excluding the starter)
- * @param bodyHtml The thread reply message groups
+ * @param messageCount The number of messages retained inside the thread
+ * @param bodyHtml The retained thread message groups
+ * @param parentUnavailable Whether the parent is absent from the main export
  * @returns The `<details>` markup to insert into the main document
  */
 const buildThreadDetails = (
   threadName: string,
-  replyCount: number,
-  bodyHtml: string
+  messageCount: number,
+  bodyHtml: string,
+  parentUnavailable = false
 ): string => {
-  const label = `${threadName} \u2014 ${replyCount} ${
-    replyCount === 1 ? "message" : "messages"
-  }`;
+  const label = `${threadName} \u2014 ${messageCount} ${
+    messageCount === 1 ? "message" : "messages"
+  }${parentUnavailable ? " \u2014 Parent message unavailable" : ""}`;
 
   return (
     `<details class=chatlog__thread>` +
@@ -228,12 +255,12 @@ const insertThreadUnderMessage = (
 /**
  * Scans a directory of DiscordChatExporter HTML files and produces a single
  * merged HTML file where each thread export is embedded as a collapsible
- * section beneath the message it was started from.
+ * section beneath the message it was started from. Threads whose parents are
+ * absent are preserved in a standalone section at the end of the chatlog.
  *
  * The main channel export is identified by matching the trailing ID in its file
  * name to the requested channel ID. Every other HTML file is treated as a
- * thread export, and its trailing ID is the ID of the starter message in the
- * main export that the thread belongs to.
+ * thread export, and its trailing ID is the expected starter message ID.
  *
  * @param directory The directory to scan for the main and thread HTML exports
  * @param channelId The ID of the exported main channel
@@ -268,6 +295,7 @@ export const mergeThreadsInDirectory = async (
   const threadExports = exports.filter((exp) => exp !== mainExport);
 
   let mergedHtml = mainExport.html;
+  const unattachedThreads: string[] = [];
 
   for (const thread of threadExports) {
     const parentId = thread.trailingId;
@@ -301,28 +329,52 @@ export const mergeThreadsInDirectory = async (
       );
     }
 
-    // Strip only the starter message's container; it already exists in the main
-    // export. Keep co-grouped follow-ups from the same author.
-    const strippedGroups = groups
-      .map((group) => stripMessageContainer(group.html, parentId))
+    // Only remove the starter when it already exists in the main export.
+    // Unattached threads must retain every message, including their starter.
+    const parentInMainExport = mainExport.messageIds.has(parentId);
+    const retainedGroups = groups
+      .map((group) =>
+        parentInMainExport
+          ? stripMessageContainer(group.html, parentId)
+          : group.html
+      )
       .filter((html) => /data-message-id=\d+/.test(html));
 
-    const bodyHtml = strippedGroups.join("\n");
-    const replyCount =
+    const bodyHtml = retainedGroups.join("\n");
+    const messageCount =
       groups.reduce((total, group) => total + group.ids.length, 0) -
-      (groups.some((group) => group.ids.includes(parentId)) ? 1 : 0);
+      (parentInMainExport && groups.some((group) => group.ids.includes(parentId))
+        ? 1
+        : 0);
 
     const threadName = getThreadName(thread.html, thread.fileName);
-    const detailsHtml = buildThreadDetails(threadName, replyCount, bodyHtml);
+    const detailsHtml = buildThreadDetails(
+      threadName,
+      messageCount,
+      bodyHtml,
+      !parentInMainExport
+    );
+
+    if (!parentInMainExport) {
+      unattachedThreads.push(detailsHtml);
+      console.warn(
+        `Parent message ${parentId} for thread "${thread.fileName}" is absent from the main export; preserving all thread messages in a standalone section`
+      );
+      continue;
+    }
 
     const updated = insertThreadUnderMessage(mergedHtml, parentId, detailsHtml);
     if (updated === null) {
       throw new Error(
-        `Parent message ${parentId} for thread "${thread.fileName}" was not found in the main export`
+        `Could not locate parent message container ${parentId} in the main export for thread "${thread.fileName}"`
       );
     }
 
     mergedHtml = updated;
+  }
+
+  if (unattachedThreads.length > 0) {
+    mergedHtml = appendUnattachedThreads(mergedHtml, unattachedThreads);
   }
 
   // Inject the thread styling into the existing stylesheet.

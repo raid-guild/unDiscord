@@ -5,6 +5,7 @@ This service provides an API endpoint that exports Discord channels to HTML usin
 ## Features
 
 - Export Discord channels to HTML using DiscordChatExporter CLI
+- Merge threads beneath their parent messages, preserving threads with missing parents in a labeled standalone section
 - Upload exported HTML files to DigitalOcean Spaces for permanent storage
 - Move exported channel to a Valhalla (archive) channel category
 - RESTful API for triggering exports
@@ -122,6 +123,8 @@ docker pull sunsakis/discord-exporter:latest
 - **Discord API Rate Limits**: The DiscordChatExporter CLI can hit rate limits if you're exporting large channels or many channels in a short period. Consider adding delays between exports.
 
 - **Permission Errors**: Make sure your Discord bot has the necessary permissions to read the channels you're exporting.
+
+- **Missing Thread Parents**: If a thread's starter message is unavailable in the main export, the merged archive preserves every exported thread message in a section labeled "Threads with unavailable parent messages." A warning identifies the thread, and the archive can still be uploaded. HTML parsing errors continue to fail the merge. Raw exports remain in `/data/archives/<channelId>-<timestamp>/` for inspection after a failed request.
 
 ## License
 

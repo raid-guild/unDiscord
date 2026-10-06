@@ -67,27 +67,151 @@ test("merges replies and removes only the duplicated starter message", async () 
   assert.match(merged, /data-message-id=202\b/);
 });
 
-test("rejects a thread whose parent message is absent from the main export", async () => {
+test("preserves an unattached thread's starter and replies without changing raw exports", async () => {
+  const directory = await createDirectory();
+  const mainPath = path.join(directory, "Guild - channel [100].html");
+  const threadPath = path.join(directory, "Guild - channel - orphan [200].html");
+  const mainHtml = exportHtml(
+    "Guild / channel",
+    messageGroup(
+      messageContainer("300", '<a href="/channels/100/200">Thread link</a>')
+    )
+  );
+  const threadHtml = exportHtml(
+    "Guild / channel / orphan",
+    messageGroup(
+      messageContainer("200", "starter"),
+      messageContainer("201", "reply")
+    )
+  );
+
+  await writeFile(mainPath, mainHtml);
+  await writeFile(threadPath, threadHtml);
+
+  const outputPath = await mergeThreadsInDirectory(directory, "100");
+  const merged = await readFile(outputPath, "utf8");
+
+  assert.match(merged, /Threads with unavailable parent messages/);
+  assert.match(merged, /Thread: orphan — 2 messages — Parent message unavailable/);
+  for (const id of ["200", "201", "300"]) {
+    assert.equal(
+      [...merged.matchAll(new RegExp(`data-message-id=${id}\\b`, "g"))].length,
+      1
+    );
+  }
+  assert.match(merged, /<\/section><\/div><\/body><\/html>$/);
+  assert.equal(await readFile(mainPath, "utf8"), mainHtml);
+  assert.equal(await readFile(threadPath, "utf8"), threadHtml);
+
+  // Reprocessing the same directory must exclude the previously merged file.
+  assert.equal(await mergeThreadsInDirectory(directory, "100"), outputPath);
+  assert.equal(await readFile(outputPath, "utf8"), merged);
+});
+
+test("continues merging attached threads alongside multiple unattached threads", async () => {
   const directory = await createDirectory();
 
   await writeFile(
     path.join(directory, "Guild - channel [100].html"),
-    exportHtml("Guild / channel", messageGroup(messageContainer("300", "main")))
+    exportHtml("Guild / channel", messageGroup(messageContainer("500", "parent")))
   );
   await writeFile(
-    path.join(directory, "Guild - channel - orphan [200].html"),
+    path.join(directory, "Guild - channel - a orphan [200].html"),
     exportHtml(
-      "Guild / channel / orphan",
+      "Guild / channel / a orphan",
+      messageGroup(messageContainer("201", "reply with deleted starter"))
+    )
+  );
+  await writeFile(
+    path.join(directory, "Guild - channel - b orphan [400].html"),
+    exportHtml(
+      "Guild / channel / b orphan",
       messageGroup(
-        messageContainer("200", "starter"),
-        messageContainer("201", "reply")
+        messageContainer("400", "unattached starter"),
+        messageContainer("401", "unattached reply")
       )
+    )
+  );
+  await writeFile(
+    path.join(directory, "Guild - channel - z attached [500].html"),
+    exportHtml(
+      "Guild / channel / z attached",
+      messageGroup(
+        messageContainer("500", "parent"),
+        messageContainer("501", "attached reply")
+      )
+    )
+  );
+
+  const outputPath = await mergeThreadsInDirectory(directory, "100");
+  const merged = await readFile(outputPath, "utf8");
+
+  assert.match(merged, /Thread: a orphan — 1 message — Parent message unavailable/);
+  assert.match(merged, /Thread: b orphan — 2 messages — Parent message unavailable/);
+  assert.match(merged, /Thread: z attached — 1 message<\/summary>/);
+  assert.equal(
+    [...merged.matchAll(/<section class=chatlog__unattached-threads>/g)].length,
+    1
+  );
+  for (const id of ["201", "400", "401", "500", "501"]) {
+    assert.equal(
+      [...merged.matchAll(new RegExp(`data-message-id=${id}\\b`, "g"))].length,
+      1
+    );
+  }
+  assert.ok(
+    merged.indexOf("Thread: z attached") <
+      merged.indexOf("<section class=chatlog__unattached-threads>")
+  );
+  assert.match(merged, /<\/section><\/div><\/body><\/html>$/);
+});
+
+test("rejects unsupported parent container markup instead of treating it as missing", async () => {
+  const directory = await createDirectory();
+
+  await writeFile(
+    path.join(directory, "Guild - channel [100].html"),
+    exportHtml(
+      "Guild / channel",
+      messageGroup(
+        messageContainer("200", "parent")
+          .replace("<div id=", '<div id="')
+          .replace("-200 class=", '-200" class=')
+      )
+    )
+  );
+  await writeFile(
+    path.join(directory, "Guild - channel - thread [200].html"),
+    exportHtml(
+      "Guild / channel / thread",
+      messageGroup(messageContainer("201", "reply"))
     )
   );
 
   await assert.rejects(
     mergeThreadsInDirectory(directory, "100"),
-    /Parent message 200 .* was not found in the main export/
+    /Could not locate parent message container 200/
+  );
+});
+
+test("rejects an unparseable main chatlog when preserving unattached threads", async () => {
+  const directory = await createDirectory();
+
+  await writeFile(
+    path.join(directory, "Guild - channel [100].html"),
+    exportHtml("Guild / channel", "", "<div data-template-version=2 class=chatlog>")
+  );
+  await writeFile(
+    path.join(directory, "Guild - channel - orphan [200].html"),
+    exportHtml(
+      "Guild / channel / orphan",
+      messageGroup(messageContainer("201", "reply"))
+    )
+  );
+
+  await assert.rejects(
+    mergeThreadsInDirectory(directory, "100"),
+    /Could not locate main chatlog to preserve unattached threads/
   );
 });
 

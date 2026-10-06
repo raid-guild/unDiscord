@@ -407,7 +407,7 @@ export const exportChannel = async (
     // Check if the export was successful
     if (stdout.includes("Successfully exported")) {
       await appendLog(
-        `🟩 Successfully exported channel ${channelId} (${channelName}) - ${new Date().toISOString()}`
+        `🟩 Raw HTML export completed for channel ${channelId} (${channelName}); merging threads before upload - ${new Date().toISOString()}`
       );
 
       const mergedFilePath = await mergeThreadsInDirectory(
@@ -417,6 +417,10 @@ export const exportChannel = async (
 
       // Upload the file to DigitalOcean Spaces - pass the channel name
       await uploadToSpaces(mergedFilePath, channelName);
+
+      await appendLog(
+        `🟩 Successfully merged and uploaded channel ${channelId} (${channelName}) - ${new Date().toISOString()}`
+      );
 
       // Move channel to Valhalla (archive) category
       await moveChannelToValhalla(channelId, guildId, true);
